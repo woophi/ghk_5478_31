@@ -24,7 +24,6 @@ const boxCenter = style({
   padding: '2rem 1rem 1rem',
   flexDirection: 'column',
   gap: '.5rem',
-  borderRadius: '1rem',
   backgroundColor: '#F3F4F5',
   justifyContent: 'center',
   textAlign: 'center',

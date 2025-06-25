@@ -13,6 +13,7 @@ import { HousesMIcon } from '@alfalab/icons-glyph/HousesMIcon';
 import { InformationCircleLineMIcon } from '@alfalab/icons-glyph/InformationCircleLineMIcon';
 import { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import hb from './assets/hb.png';
 import { LS, LSKeys } from './ls';
 import { appSt } from './style.css';
 import { ThxLayout } from './thx/ThxLayout';
@@ -132,7 +133,7 @@ export const App = () => {
     setMonthlyAmount(calculateMonthlyPayment(RATE, 12, (Number(value) / 100) * 12, amount));
   };
 
-  if (!thxShow) {
+  if (thxShow) {
     return <ThxLayout />;
   }
 
@@ -146,12 +147,17 @@ export const App = () => {
           <Typography.TitleResponsive tag="h1" view="medium" font="system" weight="semibold">
             На своих условиях
           </Typography.TitleResponsive>
+          <img src={hb} width={183} style={{ marginBottom: '-1rem', marginTop: '-2rem' }} />
         </div>
         <div className={appSt.container}>
           <div className={appSt.box}>
             <div>
               <Typography.TitleResponsive tag="h3" view="small" font="system" weight="medium">
-                {formatPipsValue(amount)}
+                {amount.toLocaleString('ru-RU', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                ₽
               </Typography.TitleResponsive>
               <Typography.Text view="primary-small" color="secondary">
                 Сумма кредита
@@ -169,7 +175,11 @@ export const App = () => {
             <Divider />
             <div>
               <Typography.TitleResponsive tag="h3" view="small" font="system" weight="medium">
-                {formatPipsValue(monthlyAmount)}
+                {monthlyAmount.toLocaleString('ru-RU', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                ₽
               </Typography.TitleResponsive>
               <Typography.Text view="primary-small" color="secondary">
                 Платёж в месяц
@@ -186,7 +196,7 @@ export const App = () => {
             </div>
           </div>
         </div>
-        <Gap size={96} />
+        <Gap size={128} />
 
         <div className={appSt.bottomBtn}>
           <ButtonMobile loading={loading} block view="primary" onClick={submit}>
@@ -209,8 +219,52 @@ export const App = () => {
         <Typography.TitleResponsive tag="h1" view="medium" font="system" weight="semibold">
           На своих условиях
         </Typography.TitleResponsive>
+        <img src={hb} width={183} style={{ marginBottom: '-1rem', marginTop: '-2rem' }} />
       </div>
+
       <div className={appSt.container}>
+        <SliderInput
+          block={true}
+          value={amount * 100}
+          sliderValue={amount}
+          onInputChange={handleAmountInputChange}
+          onSliderChange={handleAmountSliderChange}
+          onBlur={() => setAmount(prev => clamp(prev, MIN_AMOUNT, MAX_AMOUNT))}
+          min={MIN_AMOUNT}
+          max={MAX_AMOUNT}
+          range={{ min: MIN_AMOUNT, max: MAX_AMOUNT }}
+          pips={{
+            mode: 'values',
+            values: [MIN_AMOUNT, MAX_AMOUNT],
+            format: { to: formatPipsValue },
+          }}
+          step={1}
+          Input={AmountInput}
+          labelView="outer"
+          label="Сумма"
+          size={48}
+        />
+
+        <SliderInput
+          block={true}
+          value={stringYears}
+          sliderValue={years}
+          onInputChange={handleYearsInputChange}
+          onSliderChange={handleYearsSliderChange}
+          onBlur={() => setAmount(prev => clamp(prev, MIN_YEARS, MAX_YEARS))}
+          min={MIN_YEARS}
+          max={MAX_YEARS}
+          range={{ min: MIN_YEARS, max: MAX_YEARS }}
+          pips={{
+            mode: 'values',
+            values: [MIN_YEARS, MAX_YEARS],
+            format: { to: formatPipsYearsValue },
+          }}
+          step={1}
+          labelView="outer"
+          label="Срок"
+          size={48}
+        />
         <SliderInput
           block={true}
           value={monthlyAmount * 100}
@@ -347,49 +401,6 @@ export const App = () => {
             <InformationCircleLineMIcon />
           </div>
         </div>
-
-        <SliderInput
-          block={true}
-          value={amount * 100}
-          sliderValue={amount}
-          onInputChange={handleAmountInputChange}
-          onSliderChange={handleAmountSliderChange}
-          onBlur={() => setAmount(prev => clamp(prev, MIN_AMOUNT, MAX_AMOUNT))}
-          min={MIN_AMOUNT}
-          max={MAX_AMOUNT}
-          range={{ min: MIN_AMOUNT, max: MAX_AMOUNT }}
-          pips={{
-            mode: 'values',
-            values: [MIN_AMOUNT, MAX_AMOUNT],
-            format: { to: formatPipsValue },
-          }}
-          step={1}
-          Input={AmountInput}
-          labelView="outer"
-          label="Сумма"
-          size={48}
-        />
-
-        <SliderInput
-          block={true}
-          value={stringYears}
-          sliderValue={years}
-          onInputChange={handleYearsInputChange}
-          onSliderChange={handleYearsSliderChange}
-          onBlur={() => setAmount(prev => clamp(prev, MIN_YEARS, MAX_YEARS))}
-          min={MIN_YEARS}
-          max={MAX_YEARS}
-          range={{ min: MIN_YEARS, max: MAX_YEARS }}
-          pips={{
-            mode: 'values',
-            values: [MIN_YEARS, MAX_YEARS],
-            format: { to: formatPipsYearsValue },
-          }}
-          step={1}
-          labelView="outer"
-          label="Срок"
-          size={48}
-        />
       </div>
 
       <PopupSheet hasCloser swipeable open={openPop} onClose={() => setPop(false)}>
