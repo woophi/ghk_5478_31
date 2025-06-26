@@ -39,28 +39,34 @@ const formatPipsValue = (value: number) => `${value.toLocaleString('ru-RU')} ₽
 const formatPipsYearsValue = (value: number) => `${value.toLocaleString('ru-RU')} ${value <= 1 ? 'год' : 'лет'}`;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const MIN_MONTHLY_PAYMENT = 10_000;
+const MIN_MONTHLY_PAYMENT = 1_000;
 const MAX_MONTHLY_PAYMENT = 250_000;
-const MIN_AMOUNT = 50_000;
-const MAX_AMOUNT = 1_900_000;
-const MIN_YEARS = 1;
-const MAX_YEARS = 20;
 
 const rateBasedOnSelection: Record<string, number> = {
   'Без залога': 0.339,
   Авто: 0.27,
-  Имущества: 0.2807,
+  Недвижимость: 0.2807,
+};
+const minMaxLoanBasedOnSelection: Record<string, { min: number; max: number }> = {
+  'Без залога': { min: 30_000, max: 7_500_000 },
+  Авто: { min: 30_000, max: 7_500_000 },
+  Недвижимость: { min: 500_000, max: 30_000_000 },
+};
+const minMaxPeriodBasedOnSelection: Record<string, { min: number; max: number }> = {
+  'Без залога': { min: 1, max: 5 },
+  Авто: { min: 1, max: 5 },
+  Недвижимость: { min: 1, max: 15 },
 };
 
 const swiperPaymentToText: Record<string, { title: string; subtitle: string }> = {
   'Без залога': { title: 'Без залога', subtitle: 'Без выгоды' },
   Авто: { title: 'Авто', subtitle: 'Под залог' },
-  Имущества: { title: 'Имущества', subtitle: 'Под залог' },
+  Недвижимость: { title: 'Недвижимость', subtitle: 'Под залог' },
 };
 const swiperPaymentToGa: Record<string, GaPayload['chosen_option']> = {
   'Без залога': 'nothing',
   Авто: 'auto',
-  Имущества: 'property',
+  Недвижимость: 'property',
 };
 
 export const App = () => {
@@ -69,12 +75,14 @@ export const App = () => {
   const [thxShow, setThx] = useState(LS.getItem(LSKeys.ShowThx, false));
   const [monthlyAmount, setMonthlyAmount] = useState(15_000);
   const [swiperPayment, setSwiperPayment] = useState('Без залога');
-  const [amount, setAmount] = useState(MAX_AMOUNT);
+  const [amount, setAmount] = useState(minMaxLoanBasedOnSelection[swiperPayment].max);
   const [years, setYears] = useState(10);
   const [stringYears, setStringYears] = useState('до 1 года');
   const [view, setView] = useState<'init' | 'confirm'>('init');
 
   const RATE = rateBasedOnSelection[swiperPayment];
+  const { min: MIN_AMOUNT, max: MAX_AMOUNT } = minMaxLoanBasedOnSelection[swiperPayment];
+  const { min: MIN_YEARS, max: MAX_YEARS } = minMaxPeriodBasedOnSelection[swiperPayment];
 
   useEffect(() => {
     if (!LS.getItem(LSKeys.UserId, null)) {
@@ -88,7 +96,16 @@ export const App = () => {
     setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, amount));
   }, []);
   useEffect(() => {
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, amount));
+    const { max: maxAmount } = minMaxLoanBasedOnSelection[swiperPayment];
+    const { max: maxYears } = minMaxPeriodBasedOnSelection[swiperPayment];
+    setAmount(maxAmount);
+    setYears(maxYears);
+    if (maxYears <= 1) {
+      setStringYears('до 1 года');
+    } else {
+      setStringYears(`до ${maxYears} лет`);
+    }
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, maxYears * 12, maxAmount));
   }, [swiperPayment]);
 
   const submit = () => {
@@ -109,14 +126,14 @@ export const App = () => {
   const handleSumInputChange: OnInputChangeType = (_, { value }) => {
     const v = Number(value) / 100;
     setMonthlyAmount(v);
-    const loan = calculateLoanAmount(RATE, 12, years, v);
+    const loan = calculateLoanAmount(RATE, 12, years * 12, v);
     setAmount(loan);
   };
 
   const handleSumSliderChange = ({ value }: { value: number }) => {
     const v = value;
     setMonthlyAmount(v);
-    const loan = calculateLoanAmount(RATE, 12, years, v);
+    const loan = calculateLoanAmount(RATE, 12, years * 12, v);
     setAmount(loan);
   };
 
@@ -370,32 +387,32 @@ export const App = () => {
             </Typography.Text>
           </div>
         </SwiperSlide>
-        <SwiperSlide onClick={() => setSwiperPayment('Имущества')} style={{ width: 'min-content' }}>
+        <SwiperSlide onClick={() => setSwiperPayment('Недвижимость')} style={{ width: 'min-content' }}>
           <Gap size={4} />
           <div
             className={appSt.sliderCard({
-              selected: swiperPayment === 'Имущества',
+              selected: swiperPayment === 'Недвижимость',
             })}
           >
-            {swiperPayment === 'Имущества' && (
+            {swiperPayment === 'Недвижимость' && (
               <div className={appSt.sliderCardIcon}>
                 <CheckmarkCircleSIcon />
               </div>
             )}
-            <HousesMIcon color={swiperPayment === 'Имущества' ? '#ffffff' : undefined} />
+            <HousesMIcon color={swiperPayment === 'Недвижимость' ? '#ffffff' : undefined} />
             <Typography.Text
               tag="p"
               view="primary-small"
-              color={swiperPayment === 'Имущества' ? 'primary-inverted' : 'primary'}
+              color={swiperPayment === 'Недвижимость' ? 'primary-inverted' : 'primary'}
               defaultMargins={false}
             >
-              Имущества
+              Недвижимость
             </Typography.Text>
             <Typography.Text tag="p" view="primary-small" color="positive" defaultMargins={false}>
               -
               {(
                 calculateMonthlyPayment(rateBasedOnSelection['Без залога'], 12, years * 12, amount) -
-                calculateMonthlyPayment(rateBasedOnSelection['Имущества'], 12, years * 12, amount)
+                calculateMonthlyPayment(rateBasedOnSelection['Недвижимость'], 12, years * 12, amount)
               ).toLocaleString('ru-RU', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
