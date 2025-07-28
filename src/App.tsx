@@ -18,6 +18,7 @@ import { LS, LSKeys } from './ls';
 import { appSt } from './style.css';
 import { ThxLayout } from './thx/ThxLayout';
 import { GaPayload, sendDataToGA } from './utils/events';
+import { getWordEnding } from './utils/words';
 
 function calculateMonthlyPayment(annualRate: number, periodsPerYear: number, totalPeriods: number, loanAmount: number) {
   const monthlyRate = annualRate / periodsPerYear;
@@ -77,7 +78,6 @@ export const App = () => {
   const [swiperPayment, setSwiperPayment] = useState('Без залога');
   const [amount, setAmount] = useState(minMaxLoanBasedOnSelection[swiperPayment].max);
   const [years, setYears] = useState(10);
-  const [stringYears, setStringYears] = useState('до 1 года');
   const [view, setView] = useState<'init' | 'confirm'>('init');
 
   const RATE = rateBasedOnSelection[swiperPayment];
@@ -88,24 +88,22 @@ export const App = () => {
     if (!LS.getItem(LSKeys.UserId, null)) {
       LS.setItem(LSKeys.UserId, Date.now());
     }
-    if (years <= 1) {
-      setStringYears('до 1 года');
-    } else {
-      setStringYears(`до ${years} лет`);
-    }
     setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, amount));
   }, []);
+
   useEffect(() => {
-    const { max: maxAmount } = minMaxLoanBasedOnSelection[swiperPayment];
+    const { max: maxAmount, min: minAmount } = minMaxLoanBasedOnSelection[swiperPayment];
     const { max: maxYears } = minMaxPeriodBasedOnSelection[swiperPayment];
-    setAmount(maxAmount);
-    setYears(maxYears);
-    if (maxYears <= 1) {
-      setStringYears('до 1 года');
-    } else {
-      setStringYears(`до ${maxYears} лет`);
+    if (amount > maxAmount) {
+      setAmount(maxAmount);
     }
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, maxYears * 12, maxAmount));
+    if (years > maxYears) {
+      setYears(maxYears);
+    }
+    if (amount < minAmount) {
+      setAmount(minAmount);
+    }
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, Math.min(maxYears, years) * 12, Math.min(maxAmount, amount)));
   }, [swiperPayment]);
 
   const submit = () => {
@@ -145,12 +143,6 @@ export const App = () => {
   const handleYearsSliderChange = ({ value }: { value: number }) => {
     setYears(value);
     setMonthlyAmount(calculateMonthlyPayment(RATE, 12, value * 12, amount));
-
-    if (value <= 1) {
-      setStringYears('до 1 года');
-    } else {
-      setStringYears(`до ${value} лет`);
-    }
   };
 
   const handleAmountInputChange: OnInputChangeType = (_, { value }) => {
@@ -277,7 +269,7 @@ export const App = () => {
 
         <SliderInput
           block={true}
-          value={stringYears}
+          value={`до ${years} ${getWordEnding(years, ['года', 'лет', 'лет'])}`}
           sliderValue={years}
           onInputChange={handleYearsInputChange}
           onSliderChange={handleYearsSliderChange}
