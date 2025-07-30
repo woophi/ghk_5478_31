@@ -75,7 +75,7 @@ export const App = () => {
   const [thxShow, setThx] = useState(LS.getItem(LSKeys.ShowThx, false));
   const [monthlyAmount, setMonthlyAmount] = useState(15_000);
   const [swiperPayment, setSwiperPayment] = useState('Без залога');
-  const [amount, setAmount] = useState(minMaxLoanBasedOnSelection[swiperPayment].max);
+  const [amount, setAmount] = useState(1_000_000);
   const [view, setView] = useState<'init' | 'confirm'>('init');
 
   const RATE = rateBasedOnSelection[swiperPayment];
