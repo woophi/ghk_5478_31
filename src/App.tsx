@@ -18,7 +18,6 @@ import { LS, LSKeys } from './ls';
 import { appSt } from './style.css';
 import { ThxLayout } from './thx/ThxLayout';
 import { GaPayload, sendDataToGA } from './utils/events';
-import { getWordEnding } from './utils/words';
 
 function calculateMonthlyPayment(annualRate: number, periodsPerYear: number, totalPeriods: number, loanAmount: number) {
   const monthlyRate = annualRate / periodsPerYear;
@@ -77,18 +76,17 @@ export const App = () => {
   const [monthlyAmount, setMonthlyAmount] = useState(15_000);
   const [swiperPayment, setSwiperPayment] = useState('Без залога');
   const [amount, setAmount] = useState(minMaxLoanBasedOnSelection[swiperPayment].max);
-  const [years, setYears] = useState(10);
   const [view, setView] = useState<'init' | 'confirm'>('init');
 
   const RATE = rateBasedOnSelection[swiperPayment];
   const { min: MIN_AMOUNT, max: MAX_AMOUNT } = minMaxLoanBasedOnSelection[swiperPayment];
-  const { min: MIN_YEARS, max: MAX_YEARS } = minMaxPeriodBasedOnSelection[swiperPayment];
+  const { max: MAX_YEARS } = minMaxPeriodBasedOnSelection[swiperPayment];
 
   useEffect(() => {
     if (!LS.getItem(LSKeys.UserId, null)) {
       LS.setItem(LSKeys.UserId, Date.now());
     }
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, amount));
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, MAX_YEARS * 12, amount));
   }, []);
 
   useEffect(() => {
@@ -97,13 +95,10 @@ export const App = () => {
     if (amount > maxAmount) {
       setAmount(maxAmount);
     }
-    if (years > maxYears) {
-      setYears(maxYears);
-    }
     if (amount < minAmount) {
       setAmount(minAmount);
     }
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, Math.min(maxYears, years) * 12, Math.min(maxAmount, amount)));
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, maxYears * 12, Math.min(maxAmount, amount)));
   }, [swiperPayment]);
 
   const submit = () => {
@@ -111,7 +106,7 @@ export const App = () => {
 
     sendDataToGA({
       sum_cred: amount.toFixed(2),
-      srok_kredita: years,
+      srok_kredita: MAX_YEARS,
       platezh_mes: monthlyAmount.toFixed(2),
       chosen_option: swiperPaymentToGa[swiperPayment],
     }).then(() => {
@@ -124,35 +119,25 @@ export const App = () => {
   const handleSumInputChange: OnInputChangeType = (_, { value }) => {
     const v = Number(value) / 100;
     setMonthlyAmount(v);
-    const loan = calculateLoanAmount(RATE, 12, years * 12, v);
+    const loan = calculateLoanAmount(RATE, 12, MAX_YEARS * 12, v);
     setAmount(loan);
   };
 
   const handleSumSliderChange = ({ value }: { value: number }) => {
     const v = value;
     setMonthlyAmount(v);
-    const loan = calculateLoanAmount(RATE, 12, years * 12, v);
+    const loan = calculateLoanAmount(RATE, 12, MAX_YEARS * 12, v);
     setAmount(loan);
   };
 
   const handleAmountSliderChange = ({ value }: { value: number }) => {
     setAmount(value);
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, value));
-  };
-
-  const handleYearsSliderChange = ({ value }: { value: number }) => {
-    setYears(value);
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, value * 12, amount));
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, MAX_YEARS * 12, value));
   };
 
   const handleAmountInputChange: OnInputChangeType = (_, { value }) => {
     setAmount(Number(value) / 100);
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, years * 12, Number(value) / 100));
-  };
-
-  const handleYearsInputChange: OnInputChangeType = (_, { value }) => {
-    setYears(Number(value) / 100);
-    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, (Number(value) / 100) * 12, amount));
+    setMonthlyAmount(calculateMonthlyPayment(RATE, 12, MAX_YEARS * 12, Number(value) / 100));
   };
 
   if (thxShow) {
@@ -188,7 +173,7 @@ export const App = () => {
             <Divider />
             <div>
               <Typography.TitleResponsive tag="h3" view="small" font="system" weight="medium">
-                {formatPipsYearsValue(years)}
+                {formatPipsYearsValue(MAX_YEARS)}
               </Typography.TitleResponsive>
               <Typography.Text view="primary-small" color="secondary">
                 Срок кредита
@@ -267,26 +252,6 @@ export const App = () => {
           size={48}
         />
 
-        <SliderInput
-          block={true}
-          value={`до ${years} ${getWordEnding(years, ['года', 'лет', 'лет'])}`}
-          sliderValue={years}
-          onInputChange={handleYearsInputChange}
-          onSliderChange={handleYearsSliderChange}
-          onBlur={() => setAmount(prev => clamp(prev, MIN_YEARS, MAX_YEARS))}
-          min={MIN_YEARS}
-          max={MAX_YEARS}
-          range={{ min: MIN_YEARS, max: MAX_YEARS }}
-          pips={{
-            mode: 'values',
-            values: [MIN_YEARS, MAX_YEARS],
-            format: { to: formatPipsYearsValue },
-          }}
-          step={1}
-          labelView="outer"
-          label="Срок"
-          size={48}
-        />
         <SliderInput
           block={true}
           value={monthlyAmount * 100}
@@ -369,8 +334,18 @@ export const App = () => {
             <Typography.Text tag="p" view="primary-small" color="positive" defaultMargins={false}>
               -
               {(
-                calculateMonthlyPayment(rateBasedOnSelection['Без залога'], 12, years * 12, amount) -
-                calculateMonthlyPayment(rateBasedOnSelection['Авто'], 12, years * 12, amount)
+                calculateMonthlyPayment(
+                  rateBasedOnSelection['Без залога'],
+                  12,
+                  minMaxPeriodBasedOnSelection['Без залога'].max * 12,
+                  amount,
+                ) -
+                calculateMonthlyPayment(
+                  rateBasedOnSelection['Авто'],
+                  12,
+                  minMaxPeriodBasedOnSelection['Авто'].max * 12,
+                  amount,
+                )
               ).toLocaleString('ru-RU', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
@@ -403,8 +378,18 @@ export const App = () => {
             <Typography.Text tag="p" view="primary-small" color="positive" defaultMargins={false}>
               -
               {(
-                calculateMonthlyPayment(rateBasedOnSelection['Без залога'], 12, years * 12, amount) -
-                calculateMonthlyPayment(rateBasedOnSelection['Недвижимость'], 12, years * 12, amount)
+                calculateMonthlyPayment(
+                  rateBasedOnSelection['Без залога'],
+                  12,
+                  minMaxPeriodBasedOnSelection['Без залога'].max * 12,
+                  amount,
+                ) -
+                calculateMonthlyPayment(
+                  rateBasedOnSelection['Недвижимость'],
+                  12,
+                  minMaxPeriodBasedOnSelection['Недвижимость'].max * 12,
+                  amount,
+                )
               ).toLocaleString('ru-RU', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
